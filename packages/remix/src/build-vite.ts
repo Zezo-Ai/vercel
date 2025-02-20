@@ -23,7 +23,6 @@ import {
   getPackageVersion,
   hasScript,
   logNftWarnings,
-  findConfig,
 } from './utils';
 import type { BuildV2, Files, NodeVersion } from '@vercel/build-utils';
 
@@ -248,20 +247,6 @@ const REACT_ROUTER_FRAMEWORK_SETTINGS: FrameworkSettings = {
   },
 };
 
-function determineFrameworkSettings(workPath: string) {
-  const isReactRouter = findConfig(workPath, 'react-router.config', [
-    '.js',
-    '.ts',
-    '.mjs',
-    '.mts',
-  ]);
-
-  if (isReactRouter) {
-    return REACT_ROUTER_FRAMEWORK_SETTINGS;
-  }
-  return REMIX_FRAMEWORK_SETTINGS;
-}
-
 interface HandlerOptions {
   rootDir: string;
   serverBuildPath: string;
@@ -304,7 +289,10 @@ export const build: BuildV2 = async ({
   const mountpoint = dirname(entrypoint);
   const entrypointFsDirname = join(workPath, mountpoint);
 
-  const frameworkSettings = determineFrameworkSettings(workPath);
+  const frameworkSettings =
+    config.framework === 'react-router'
+      ? REACT_ROUTER_FRAMEWORK_SETTINGS
+      : REMIX_FRAMEWORK_SETTINGS;
 
   // Run "Install Command"
   const nodeVersion = await getNodeVersion(
@@ -334,6 +322,7 @@ export const build: BuildV2 = async ({
     nodeVersion,
     env: spawnOpts.env,
     turboSupportsCorepackHome,
+    projectCreatedAt: config.projectSettings?.createdAt,
   });
 
   if (typeof installCommand === 'string') {
@@ -347,7 +336,14 @@ export const build: BuildV2 = async ({
       console.log(`Skipping "install" command...`);
     }
   } else {
-    await runNpmInstall(entrypointFsDirname, [], spawnOpts, meta, nodeVersion);
+    await runNpmInstall(
+      entrypointFsDirname,
+      [],
+      spawnOpts,
+      meta,
+      nodeVersion,
+      config.projectSettings?.createdAt
+    );
   }
 
   // Determine the version of framework:
@@ -372,11 +368,17 @@ export const build: BuildV2 = async ({
       await runPackageJsonScript(
         entrypointFsDirname,
         'vercel-build',
-        spawnOpts
+        spawnOpts,
+        config.projectSettings?.createdAt
       );
     } else if (hasScript('build', packageJson)) {
       debug(`Executing "build" script`);
-      await runPackageJsonScript(entrypointFsDirname, 'build', spawnOpts);
+      await runPackageJsonScript(
+        entrypointFsDirname,
+        'build',
+        spawnOpts,
+        config.projectSettings?.createdAt
+      );
     } else {
       await execCommand(frameworkSettings.buildCommand, {
         ...spawnOpts,

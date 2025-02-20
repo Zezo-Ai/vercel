@@ -1,5 +1,17 @@
 # @vercel/next
 
+## 4.6.2
+
+### Patch Changes
+
+- Handle patterns in rewrite destinations correctly ([#13052](https://github.com/vercel/vercel/pull/13052))
+
+## 4.6.1
+
+### Patch Changes
+
+- Fix duplicate trace names generated from builders ([#13051](https://github.com/vercel/vercel/pull/13051))
+
 ## 4.6.0
 
 ### Minor Changes
